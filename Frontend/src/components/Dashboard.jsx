@@ -232,6 +232,7 @@ export default function Dashboard({ role }) {
         // Check if we hit a new stop
         if (currentIndex > previousIndex && currentIndex < route.length) {
           const isFinal = currentIndex >= route.length - 1;
+          console.log(`[DRIVER SOCKET PROBE]: Emitting busEvent ${isFinal ? 'DESTINATION_REACHED' : 'STOP_REACHED'} at stopIndex ${currentIndex}`);
           socket.emit('busEvent', {
             busId: activeBusId,
             type: isFinal ? 'DESTINATION_REACHED' : 'STOP_REACHED',
@@ -349,39 +350,38 @@ export default function Dashboard({ role }) {
           setTripDirection(data.location.isReversed);
         }
         if (data.location.isReached !== undefined) {
-          setStudentReached(data.location.isReached);
+          setStudentReached(prev => {
+            if (!prev && data.location.isReached) {
+              const baseStops = ROUTE_STOPS_DATA[data.busId] || ROUTE_STOPS_DATA['B101'];
+              const orderedStops = data.location.isReversed ? [...baseStops].reverse() : baseStops;
+              const reachedStopName = orderedStops[orderedStops.length - 1]?.name || 'Destination';
+              addToast(`✅ Journey Complete: Arrived at ${reachedStopName}`);
+            }
+            return data.location.isReached;
+          });
         }
         if (data.location.nextStopIndex !== undefined) {
-          setNextStopIndex(data.location.nextStopIndex);
+          setNextStopIndex(prev => {
+            if (prev !== undefined && prev !== data.location.nextStopIndex && !data.location.isReached) {
+              const baseStops = ROUTE_STOPS_DATA[data.busId] || ROUTE_STOPS_DATA['B101'];
+              const orderedStops = data.location.isReversed ? [...baseStops].reverse() : baseStops;
+              const reachedStopName = orderedStops[prev]?.name || 'Next Stop';
+              addToast(`📍 Bus reached ${reachedStopName}`);
+            }
+            return data.location.nextStopIndex;
+          });
         }
       };
 
       const handleBusEvent = (data) => {
-        console.log(`📡 STUDENT RECEIVED EVENT:`, data);
-        addToast(`[RAW SOCKET DEBUG]: ${data.type} from ${data.busId}`);
-        
+        // Fallback for STARTED events since they are standalone
         if (currentUser && currentUser.assignedBus) {
           const expectedNumber = typeof currentUser.assignedBus === 'object'
             ? currentUser.assignedBus.busNumber
             : currentUser.assignedBus;
 
-          if (data.busId !== expectedNumber) {
-            console.log(`Discarded Event for ${data.busId}`);
-            return;
-          }
-
-          if (data.type === 'STARTED') {
+          if (data.busId === expectedNumber && data.type === 'STARTED') {
              addToast(data.message || `🚌 Bus ${data.busId} started its route!`);
-          } else if (data.type === 'STOP_REACHED') {
-             const baseStops = ROUTE_STOPS_DATA[data.busId] || ROUTE_STOPS_DATA['B101'];
-             const orderedStops = data.isReversed ? [...baseStops].reverse() : baseStops;
-             const reachedStopName = orderedStops[data.stopIndex]?.name || 'Next Stop';
-             addToast(`📍 Bus reached ${reachedStopName}`);
-          } else if (data.type === 'DESTINATION_REACHED') {
-             const baseStops = ROUTE_STOPS_DATA[data.busId] || ROUTE_STOPS_DATA['B101'];
-             const orderedStops = data.isReversed ? [...baseStops].reverse() : baseStops;
-             const reachedStopName = orderedStops[data.stopIndex]?.name || 'Destination';
-             addToast(`✅ Journey Complete: Arrived at ${reachedStopName}`);
           }
         }
       };
@@ -657,6 +657,58 @@ export default function Dashboard({ role }) {
                     </p>
                   )}
                 </div>
+
+                {(() => {
+                  const baseStopsDriver = ROUTE_STOPS_DATA[activeBusId] || ROUTE_STOPS_DATA['B101'];
+                  const orderedStopsDriver = isReversed ? [...baseStopsDriver].reverse() : baseStopsDriver;
+                  
+                  let driverNextStopIndex = isTripActive || tripProgressRef.current > 0 
+                     ? Math.min(Math.floor(tripProgressRef.current) + 1, orderedStopsDriver.length - 1)
+                     : 1;
+
+                  if (isReached) driverNextStopIndex = orderedStopsDriver.length;
+
+                  return (
+                    <div style={{ marginTop: '5px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', color: t.subtext, fontSize: '0.9rem', textTransform: 'uppercase' }}>Route Progress</h4>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        {orderedStopsDriver.map((stop, index) => {
+                          const isPast = index < driverNextStopIndex && !isReached;
+                          const isCurrent = index === driverNextStopIndex && !isReached;
+                          
+                          let color = t.stopFuture;
+                          if (isReached || isPast) color = t.stopPassed;
+                          else if (isCurrent) color = t.primaryText;
+
+                          return (
+                            <React.Fragment key={index}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ 
+                                  width: '14px', 
+                                  height: '14px', 
+                                  borderRadius: '50%', 
+                                  background: color,
+                                  boxShadow: isCurrent ? `0 0 12px ${t.primaryText}` : (isReached || isPast ? `0 0 8px ${t.stopPassed}` : 'none'),
+                                  border: 'none'
+                                }} />
+                                <span style={{ 
+                                  fontSize: '0.95rem', 
+                                  color: isCurrent ? t.text : (isPast || isReached ? (isDark ? '#cbd5e1' : '#64748b') : t.subtext),
+                                  fontWeight: isCurrent ? 'bold' : 'normal'
+                                }}>
+                                  {stop.name}
+                                </span>
+                              </div>
+                              {index < orderedStopsDriver.length - 1 && (
+                                <div style={{ flex: 1, minWidth: '15px', maxWidth: '30px', height: '2px', background: isReached || isPast ? t.stopPassed : (isDark ? '#334155' : '#e2e8f0') }} />
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
                   <button
