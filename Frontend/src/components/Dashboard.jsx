@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import 'leaflet-rotatedmarker';
+import { FaSun, FaMoon } from 'react-icons/fa';
 
 const busSvg = `
   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="80" viewBox="0 0 40 80">
@@ -65,12 +66,83 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+// Geographic Matrix (Real-World Path Plots)
+const STATIC_FULL_ROUTES = {
+  'B101': [[15.3344, 74.7570], [15.5344, 74.6570], [15.7344, 74.5570], [15.8497, 74.4977]], // Haliyal -> Belgaum
+  'B102': [[15.3344, 74.7570], [15.3000, 74.7000], [15.2667, 74.6667], [15.2361, 74.6173]], // Haliyal -> Dandeli
+  'B103': [[15.3344, 74.7570], [15.4200, 74.9200], [15.4600, 75.0100], [15.3500, 75.1300]]  // Haliyal -> Hubli
+};
 
+const ROUTE_STOPS_DATA = {
+  'B101': [
+    { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
+    { name: 'Kittur Cross', lat: 15.5344, lng: 74.6570 },
+    { name: 'MK Hubli', lat: 15.7344, lng: 74.5570 },
+    { name: 'Belgaum City', lat: 15.8497, lng: 74.4977 }
+  ],
+  'B102': [
+    { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
+    { name: 'Mavinkoppa', lat: 15.3000, lng: 74.7000 },
+    { name: 'Barchi', lat: 15.2667, lng: 74.6667 },
+    { name: 'Dandeli', lat: 15.2361, lng: 74.6173 }
+  ],
+  'B103': [
+    { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
+    { name: 'Dharwad Toll', lat: 15.4200, lng: 74.9200 },
+    { name: 'Navanagar', lat: 15.4600, lng: 75.0100 },
+    { name: 'Hubli Hub', lat: 15.3500, lng: 75.1300 }
+  ]
+};
 
 export default function Dashboard({ role }) {
+
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+  const isDark = theme === 'dark';
+
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.remove('light');
+    } else {
+      document.body.classList.add('light');
+    }
+  }, [isDark]);
+
+  const t = {
+    bg: isDark ? '#0f172a' : 'radial-gradient(circle at top left, rgba(139, 92, 246, 0.08) 0%, transparent 40%), radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.08) 0%, transparent 40%), linear-gradient(135deg, #f0f9ff 0%, #f3e8ff 50%, #e0f2fe 100%)',
+    text: isDark ? 'white' : '#0f172a',
+    subtext: isDark ? '#94a3b8' : '#64748b',
+    panelBg: isDark ? '#1e293b' : 'linear-gradient(145deg, #ffffff, #f8fafc)',
+    panelGrad: isDark ? 'linear-gradient(145deg, #1e293b, #0f172a)' : 'linear-gradient(145deg, #ffffff, #f0f9ff)',
+    border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)',
+    shadow: isDark ? '0 15px 35px rgba(0,0,0,0.4)' : '0 15px 35px rgba(0,0,0,0.08)',
+    mapBorder: isDark ? '2px solid #334155' : '2px solid #cbd5e1',
+    mapShadow: isDark ? '0 10px 40px rgba(0,0,0,0.5)' : '0 10px 40px rgba(0,0,0,0.1)',
+    btnBgOff: isDark ? '#1e293b' : '#f1f5f9',
+    tableBgHover: isDark ? "scale(1.03)" : "scale(1.03)",
+    primaryText: isDark ? '#38bdf8' : '#0284c7',
+    primaryGrad: isDark ? 'linear-gradient(45deg, #0ea5e9, #6f00ff)' : 'linear-gradient(45deg, #0284c7, #4f46e5)',
+    haltGrad: isDark ? 'linear-gradient(45deg, #ff3366, #e11d48)' : 'linear-gradient(45deg, #ef4444, #b91c1c)',
+    inputBg: isDark ? '#0f172a' : '#f8fafc',
+    inputColor: isDark ? 'white' : '#0f172a',
+    stopPassed: isDark ? '#10b981' : '#059669',
+    stopFuture: isDark ? '#475569' : '#cbd5e1',
+    innerPanelBg: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(248,250,252,0.8)',
+    innerBorder: isDark ? 'none' : '1px solid #e2e8f0',
+    signOutGrad: isDark ? 'linear-gradient(45deg, #1e293b, #334155)' : 'linear-gradient(45deg, #f8fafc, #e2e8f0)',
+    signOutColor: isDark ? '#e2e8f0' : '#475569',
+    signOutBorder: isDark ? '#475569' : '#cbd5e1',
+    toastBg: isDark ? '#0ea5e9' : '#0284c7',
+    toastText: isDark ? '#0f172a' : '#ffffff',
+    pathColor: isDark ? '#ffffff' : '#0284c7'
+  };
   const socket = React.useMemo(() => {
-    return io(import.meta.env.VITE_BACKEND_URL, { transport: ['websocket'] })
-  })
+    return io(import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000', { transports: ['websocket'] })
+  }, []);
 
   const navigate = useNavigate();
   const [pendingStudents, setPendingStudents] = useState([]);
@@ -115,34 +187,6 @@ export default function Dashboard({ role }) {
       if (numMatch) activeBusId = `B10${numMatch[0]}`;
     }
   }
-
-  // Geographic Matrix (Real-World Path Plots)
-  const STATIC_FULL_ROUTES = {
-    'B101': [[15.3344, 74.7570], [15.5344, 74.6570], [15.7344, 74.5570], [15.8497, 74.4977]], // Haliyal -> Belgaum
-    'B102': [[15.3344, 74.7570], [15.3000, 74.7000], [15.2667, 74.6667], [15.2361, 74.6173]], // Haliyal -> Dandeli
-    'B103': [[15.3344, 74.7570], [15.4200, 74.9200], [15.4600, 75.0100], [15.3500, 75.1300]]  // Haliyal -> Hubli
-  };
-
-  const ROUTE_STOPS_DATA = {
-    'B101': [
-      { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
-      { name: 'Kittur Cross', lat: 15.5344, lng: 74.6570 },
-      { name: 'MK Hubli', lat: 15.7344, lng: 74.5570 },
-      { name: 'Belgaum City', lat: 15.8497, lng: 74.4977 }
-    ],
-    'B102': [
-      { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
-      { name: 'Mavinkoppa', lat: 15.3000, lng: 74.7000 },
-      { name: 'Barchi', lat: 15.2667, lng: 74.6667 },
-      { name: 'Dandeli', lat: 15.2361, lng: 74.6173 }
-    ],
-    'B103': [
-      { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
-      { name: 'Dharwad Toll', lat: 15.4200, lng: 74.9200 },
-      { name: 'Navanagar', lat: 15.4600, lng: 75.0100 },
-      { name: 'Hubli Hub', lat: 15.3500, lng: 75.1300 }
-    ]
-  };
 
   const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
 
@@ -313,12 +357,18 @@ export default function Dashboard({ role }) {
       };
 
       const handleBusEvent = (data) => {
+        console.log(`📡 STUDENT RECEIVED EVENT:`, data);
+        addToast(`[RAW SOCKET DEBUG]: ${data.type} from ${data.busId}`);
+        
         if (currentUser && currentUser.assignedBus) {
           const expectedNumber = typeof currentUser.assignedBus === 'object'
             ? currentUser.assignedBus.busNumber
             : currentUser.assignedBus;
 
-          if (data.busId !== expectedNumber) return;
+          if (data.busId !== expectedNumber) {
+            console.log(`Discarded Event for ${data.busId}`);
+            return;
+          }
 
           if (data.type === 'STARTED') {
              addToast(data.message || `🚌 Bus ${data.busId} started its route!`);
@@ -344,7 +394,7 @@ export default function Dashboard({ role }) {
         socket.off('busEvent', handleBusEvent);
       };
     }
-  }, [role, currentUser, ROUTE_STOPS_DATA, addToast]);
+  }, [role, currentUser, addToast]);
 
   // ✅ Approve + assign bus
   const assignBus = async (userId, busNumber) => {
@@ -381,9 +431,10 @@ export default function Dashboard({ role }) {
   return (
     <div style={{
       padding: "20px",
-      background: "#0f172a",
+      background: t.bg,
       minHeight: "100vh",
-      color: "white",
+      color: t.text,
+      transition: "all 0.3s ease",
       boxSizing: "border-box",
       display: "flex",
       flexDirection: "column",
@@ -408,8 +459,8 @@ export default function Dashboard({ role }) {
       }}>
         {toasts.map(toast => (
           <div key={toast.id} style={{
-            background: '#0ea5e9',
-            color: '#0f172a',
+            background: t.toastBg,
+            color: t.toastText,
             padding: '16px 24px',
             borderRadius: '12px',
             boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
@@ -427,20 +478,41 @@ export default function Dashboard({ role }) {
         <h1 style={{
           fontSize: "28px",
           margin: 0,
-          color: "#38bdf8"
+          color: t.primaryText,
+          transition: "all 0.3s ease"
         }}>
           🚍 Nexus Transit - {role} Panel
         </h1>
-        <button
+        <div style={{ display: 'flex', gap: '15px' }}>
+          <button
+            onClick={toggleTheme}
+            style={{
+              padding: '10px 15px',
+              background: t.signOutGrad,
+              color: t.signOutColor,
+              border: `1px solid ${t.signOutBorder}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.2rem',
+              transition: 'all 0.3s'
+            }}
+          >
+            {isDark ? <FaSun color="#fef08a" /> : <FaMoon color="#475569" />}
+          </button>
+          
+          <button
           onClick={() => {
             localStorage.removeItem('userToken');
             navigate('/');
           }}
           style={{
             padding: '10px 20px',
-            background: 'linear-gradient(45deg, #1e293b, #334155)',
-            color: '#e2e8f0',
-            border: '1px solid #475569',
+            background: t.signOutGrad,
+            color: t.signOutColor,
+            border: `1px solid ${t.signOutBorder}`,
             borderRadius: '8px',
             fontWeight: 'bold',
             cursor: 'pointer',
@@ -450,10 +522,11 @@ export default function Dashboard({ role }) {
             gap: '8px'
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#ff3366'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#ff3366'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(45deg, #1e293b, #334155)'; e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = '#475569'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = t.signOutGrad; e.currentTarget.style.color = t.signOutColor; e.currentTarget.style.borderColor = t.signOutBorder; }}
         >
           <span>⟵</span> SIGN OUT
         </button>
+        </div>
       </div>
 
       {/* ================= ADMIN ================= */}
@@ -477,10 +550,11 @@ export default function Dashboard({ role }) {
                 <div
                   key={student._id}
                   style={{
-                    background: "#1e293b",
+                    background: t.panelBg,
                     padding: "20px",
                     borderRadius: "12px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                    boxShadow: t.shadow,
+                    color: t.text,
                     transition: "0.3s",
                     cursor: "pointer"
                   }}
@@ -488,8 +562,8 @@ export default function Dashboard({ role }) {
                   onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                 >
                   <h3>{student.name}</h3>
-                  <p style={{ color: "#94a3b8" }}>{student.email}</p>
-                  <p style={{ color: "#38bdf8" }}>
+                  <p style={{ color: t.subtext }}>{student.email}</p>
+                  <p style={{ color: t.primaryText }}>
                     Preferred: {student.preferredRoute}
                   </p>
 
@@ -502,8 +576,9 @@ export default function Dashboard({ role }) {
                       width: "100%",
                       padding: "8px",
                       borderRadius: "6px",
-                      background: "#0f172a",
-                      color: "white"
+                      background: t.inputBg,
+                      color: t.inputColor,
+                      border: t.border
                     }}
                   >
                     <option value="">Assign Bus</option>
@@ -548,10 +623,11 @@ export default function Dashboard({ role }) {
                 flex: '1 1 320px',
                 maxWidth: '450px',
                 padding: '28px',
-                background: 'linear-gradient(145deg, #1e293b, #0f172a)',
+                background: t.panelGrad,
                 borderRadius: '20px',
-                border: '1px solid rgba(255,255,255,0.05)',
-                boxShadow: '0 15px 35px rgba(0,0,0,0.4)',
+                border: t.border,
+                boxShadow: t.shadow,
+                transition: 'all 0.3s ease',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '24px',
@@ -559,21 +635,21 @@ export default function Dashboard({ role }) {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Vehicle Assigned</span>
-                    <h2 style={{ margin: 0, color: '#38bdf8', fontSize: '2.4rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', color: t.subtext, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Vehicle Assigned</span>
+                    <h2 style={{ margin: 0, color: t.primaryText, fontSize: '2.4rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       🚌 {activeBusId}
                     </h2>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '12px', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: t.innerPanelBg, border: t.innerBorder, padding: '12px 16px', borderRadius: '12px', boxSizing: 'border-box' }}>
                   <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: isTripActive ? '#00ffd5' : '#ff3366', boxShadow: isTripActive ? '0 0 12px #00ffd5' : '0 0 12px #ff3366' }}></div>
                   <strong style={{ color: isTripActive ? '#00ffd5' : '#ff3366', fontSize: '1.2rem', letterSpacing: '1px' }}>{isTripActive ? "SYSTEM ACTIVE" : "SYSTEM OFFLINE"}</strong>
                 </div>
 
-                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '16px 20px', borderRadius: '14px', borderLeft: '4px solid #6f00ff' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Active Route</span>
-                  <p style={{ fontSize: '1.3rem', margin: '6px 0 0 0', color: '#f0f4f8', fontWeight: '500' }}>{dFrom} <strong style={{ color: '#6f00ff', margin: '0 10px' }}>&rarr;</strong> {dTo}</p>
+                <div style={{ background: t.innerPanelBg, border: t.innerBorder, borderLeftWidth: '4px', padding: '16px 20px', borderRadius: '14px', borderLeft: `4px solid ${isDark ? '#6f00ff' : '#4f46e5'}` }}>
+                  <span style={{ fontSize: '0.85rem', color: t.subtext, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Active Route</span>
+                  <p style={{ fontSize: '1.3rem', margin: '6px 0 0 0', color: t.text, fontWeight: '500' }}>{dFrom} <strong style={{ color: '#6f00ff', margin: '0 10px' }}>&rarr;</strong> {dTo}</p>
 
                   {isReached && (
                     <p style={{ color: '#00ffd5', fontSize: '1.2rem', margin: '15px 0 0 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -594,22 +670,23 @@ export default function Dashboard({ role }) {
                       }
                       setIsTripActive(true);
                       addToast(`▶ System Online: Navigating to ${dTo}`);
+                      console.log(`📤 DRIVER SENDING RAW SOCKET EVENT:`, { busId: activeBusId, type: 'STARTED' });
                       socket.emit('busEvent', { busId: activeBusId, type: 'STARTED', message: `🚌 Bus ${activeBusId} has started its route!` });
                     }}
-                    style={{ padding: '18px', borderRadius: '14px', background: isTripActive ? '#1e293b' : 'linear-gradient(45deg, #0ea5e9, #6f00ff)', color: isTripActive ? '#64748b' : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: isTripActive ? 'none' : '0 6px 20px rgba(111, 0, 255, 0.4)' }}>
+                    style={{ padding: '18px', borderRadius: '14px', background: isTripActive ? t.btnBgOff : t.primaryGrad, color: isTripActive ? t.subtext : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: isTripActive ? 'none' : (isDark ? '0 6px 20px rgba(111, 0, 255, 0.4)' : '0 6px 20px rgba(2, 132, 199, 0.4)') }}>
                     ▶ INITIATE ROUTE
                   </button>
                   <button
                     disabled={!isTripActive}
                     onClick={() => setIsTripActive(false)}
-                    style={{ padding: '18px', borderRadius: '14px', background: !isTripActive ? '#1e293b' : 'linear-gradient(45deg, #ff3366, #e11d48)', color: !isTripActive ? '#64748b' : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: !isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: !isTripActive ? 'none' : '0 6px 20px rgba(225, 29, 72, 0.4)' }}>
+                    style={{ padding: '18px', borderRadius: '14px', background: !isTripActive ? t.btnBgOff : t.haltGrad, color: !isTripActive ? t.subtext : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: !isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: !isTripActive ? 'none' : '0 6px 20px rgba(225, 29, 72, 0.4)' }}>
                     ⏹ HALT MOVEMENT
                   </button>
                 </div>
               </div>
 
               {/* Responsive Map View - Positioned on Right */}
-              <div style={{ flex: '1 1 400px', height: "65vh", minHeight: "400px", borderRadius: "16px", border: "2px solid #334155", boxShadow: "0 10px 40px rgba(0,0,0,0.5)", overflow: "hidden", boxSizing: "border-box" }}>
+              <div style={{ flex: '1 1 400px', height: "65vh", minHeight: "400px", borderRadius: "16px", border: t.mapBorder, boxShadow: t.mapShadow, overflow: "hidden", boxSizing: "border-box" }}>
                 <MapContainer
                   center={busLocation}
                   zoom={13}
@@ -620,7 +697,7 @@ export default function Dashboard({ role }) {
                   {/* Draw Path Visually */}
                   <Polyline
                     positions={STATIC_FULL_ROUTES[activeBusId] || STATIC_FULL_ROUTES['B101']}
-                    pathOptions={{ color: '#ffffff', weight: 6, opacity: 0.9, className: 'glowing-path' }}
+                    pathOptions={{ color: t.pathColor, weight: 6, opacity: isDark ? 0.9 : 0.7, className: 'glowing-path' }}
                   />
 
                   <AnimatedMarker position={busLocation} icon={customBusIcon} heading={busHeading} />
@@ -656,23 +733,23 @@ export default function Dashboard({ role }) {
 
             return (
               <div style={{
-                background: '#1e293b',
+                background: t.panelBg,
                 padding: '24px',
                 borderRadius: '16px',
                 marginBottom: '20px',
-                borderLeft: '5px solid #38bdf8',
-                boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+                borderLeft: `5px solid ${t.primaryText}`,
+                boxShadow: t.shadow,
                 display: 'flex',
                 gap: '24px',
                 flexWrap: 'wrap'
               }}>
                 <div style={{ flex: '1 1 300px' }}>
-                  <h2 style={{ color: '#38bdf8', marginBottom: '8px', fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h2 style={{ color: t.primaryText, marginBottom: '8px', fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     🚌 Assigned Bus: {assignedBusId || "Unknown"}
                   </h2>
                   {currentUser.route && (
-                    <p style={{ color: '#e2e8f0', fontSize: '1.2rem', margin: 0 }}>
-                      <strong style={{ color: '#94a3b8' }}>Active Journey:</strong> {sFrom} &rarr; {sTo}
+                    <p style={{ color: t.text, fontSize: '1.2rem', margin: 0 }}>
+                      <strong style={{ color: t.subtext }}>Active Journey:</strong> {sFrom} &rarr; {sTo}
                     </p>
                   )}
                   {studentReached && (
@@ -682,27 +759,27 @@ export default function Dashboard({ role }) {
                   )}
                   
                   {!studentReached && (
-                    <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-                      <h4 style={{ margin: '0 0 4px 0', color: '#94a3b8', fontSize: '0.9rem', textTransform: 'uppercase' }}>Upcoming Stop</h4>
+                    <div style={{ marginTop: '16px', padding: '12px', background: isDark ? 'rgba(56, 189, 248, 0.1)' : 'rgba(2, 132, 199, 0.05)', borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(2, 132, 199, 0.2)'}` }}>
+                      <h4 style={{ margin: '0 0 4px 0', color: t.subtext, fontSize: '0.9rem', textTransform: 'uppercase' }}>Upcoming Stop</h4>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                        <span style={{ fontSize: '1.3rem', color: '#f8fafc', fontWeight: '600' }}>{nextStop.name}</span>
-                        <span style={{ fontSize: '1.1rem', color: '#38bdf8', fontWeight: 'bold' }}>Arriving in ~{etaMins} mins</span>
+                        <span style={{ fontSize: '1.3rem', color: t.text, fontWeight: '600' }}>{nextStop.name}</span>
+                        <span style={{ fontSize: '1.1rem', color: t.primaryText, fontWeight: 'bold' }}>Arriving in ~{etaMins} mins</span>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div style={{ flex: '1 1 100%', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', marginTop: '8px' }}>
-                  <h4 style={{ margin: '0 0 12px 0', color: '#94a3b8', fontSize: '0.9rem', textTransform: 'uppercase' }}>Route Progress</h4>
+                <div style={{ flex: '1 1 100%', borderTop: t.border, paddingTop: '16px', marginTop: '8px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: t.subtext, fontSize: '0.9rem', textTransform: 'uppercase' }}>Route Progress</h4>
                   <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                     {orderedStops.map((stop, index) => {
                       const isPast = index < nextStopIndex && !studentReached;
                       const isCurrent = index === nextStopIndex && !studentReached;
                       const isReachedObj = studentReached && index === orderedStops.length - 1;
                       
-                      let color = '#475569'; // Future stop
-                      if (studentReached || isPast) color = '#10b981'; // Passed / Reached whole trip
-                      else if (isCurrent) color = '#38bdf8'; // Next
+                      let color = t.stopFuture; // Future stop
+                      if (studentReached || isPast) color = t.stopPassed; // Passed / Reached whole trip
+                      else if (isCurrent) color = t.primaryText; // Next
 
                       return (
                         <React.Fragment key={index}>
@@ -712,19 +789,19 @@ export default function Dashboard({ role }) {
                               height: '14px', 
                               borderRadius: '50%', 
                               background: color,
-                              boxShadow: isCurrent ? '0 0 12px #38bdf8' : (studentReached || isPast ? '0 0 8px #10b981' : 'none'),
+                              boxShadow: isCurrent ? `0 0 12px ${t.primaryText}` : (studentReached || isPast ? `0 0 8px ${t.stopPassed}` : 'none'),
                               border: 'none'
                             }} />
                             <span style={{ 
                               fontSize: '0.95rem', 
-                              color: isCurrent ? '#f8fafc' : (isPast || studentReached ? '#cbd5e1' : '#94a3b8'),
+                              color: isCurrent ? t.text : (isPast || studentReached ? (isDark ? '#cbd5e1' : '#64748b') : t.subtext),
                               fontWeight: isCurrent ? 'bold' : 'normal'
                             }}>
                               {stop.name}
                             </span>
                           </div>
                           {index < orderedStops.length - 1 && (
-                            <div style={{ flex: 1, minWidth: '20px', maxWidth: '40px', height: '2px', background: studentReached || isPast ? '#10b981' : '#334155' }} />
+                            <div style={{ flex: 1, minWidth: '20px', maxWidth: '40px', height: '2px', background: studentReached || isPast ? t.stopPassed : (isDark ? '#334155' : '#e2e8f0') }} />
                           )}
                         </React.Fragment>
                       );
@@ -741,7 +818,7 @@ export default function Dashboard({ role }) {
           <MapContainer
             center={liveLocation}
             zoom={13}
-            style={{ height: "65vh", width: "100%", borderRadius: "12px", border: "2px solid #38bdf8", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}
+            style={{ height: "65vh", width: "100%", borderRadius: "12px", border: `2px solid ${t.primaryText}`, boxShadow: t.mapShadow }}
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
@@ -749,7 +826,7 @@ export default function Dashboard({ role }) {
             {currentUser && currentUser.assignedBus && (
               <Polyline
                 positions={STATIC_FULL_ROUTES[typeof currentUser.assignedBus === 'object' ? currentUser.assignedBus.busNumber : currentUser.assignedBus] || STATIC_FULL_ROUTES['B101']}
-                pathOptions={{ color: '#ffffff', weight: 6, className: 'glowing-path' }}
+                pathOptions={{ color: t.pathColor, weight: 6, opacity: isDark ? 0.9 : 0.7, className: 'glowing-path' }}
               />
             )}
 

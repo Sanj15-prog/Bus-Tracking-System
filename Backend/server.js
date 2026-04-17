@@ -59,6 +59,11 @@ io.on('connection', (socket) => {
     io.emit('locationUpdate', data);
   });
 
+  socket.on('busEvent', (data) => {
+    console.log("SERVER RECEIVED BUS EVENT:", data);
+    io.emit('busEvent', data);
+  });
+
   socket.on('updateStatus', (data) => {
     io.emit('statusUpdate', data);
   });

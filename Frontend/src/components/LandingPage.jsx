@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bus, User, ArrowLeft } from 'lucide-react';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaSun, FaMoon } from 'react-icons/fa';
 import axios from 'axios';
 
 export default function LandingPage() {
   const [view, setView] = useState('initial');
 
   // ✅ role state (used only for login selection)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+  const isDark = theme === 'dark';
+
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.remove('light');
+    } else {
+      document.body.classList.add('light');
+    }
+  }, [isDark]);
+
   const [role, setRole] = useState('Student');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -81,6 +97,28 @@ export default function LandingPage() {
 
   return (
     <div className="landing-container">
+      <button
+        onClick={toggleTheme}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          padding: '10px',
+          background: isDark ? 'linear-gradient(45deg, #1e293b, #334155)' : 'linear-gradient(45deg, #ffffff, #e2e8f0)',
+          color: isDark ? '#e2e8f0' : '#475569',
+          border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`,
+          borderRadius: '8px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '1.2rem',
+          zIndex: 1000,
+          transition: 'all 0.3s'
+        }}
+      >
+        {isDark ? <FaSun color="#fef08a" /> : <FaMoon color="#475569" />}
+      </button>
       <div className="landing-content">
         <div className="landing-brand">
           <div className="brand-icon-large">

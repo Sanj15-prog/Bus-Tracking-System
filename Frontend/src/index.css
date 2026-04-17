@@ -537,3 +537,33 @@ body {
   font-size: 0.9rem;
   border: 1px solid rgba(0, 255, 213, 0.2);
 }
+
+/* Light Mode Overrides */
+body.light {
+  --bg-dark: #f1f5f9;
+  --panel-bg: rgba(255, 255, 255, 0.9);
+  --primary-neon: #0284c7;
+  --secondary-accent: #6f00ff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --danger: #ef4444;
+  --glass-border: rgba(0, 0, 0, 0.15);
+}
+body.light .landing-container {
+  background: radial-gradient(circle at top left, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+              radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.08) 0%, transparent 40%),
+              linear-gradient(135deg, #f0f9ff 0%, #f3e8ff 50%, #e0f2fe 100%);
+}
+body.light .landing-card {
+  box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+}
+body.light .input-group input, body.light .input-group select, body.light .role-selector {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-main);
+}
+body.light .role-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+body.light .input-group input::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
