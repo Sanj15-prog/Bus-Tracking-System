@@ -251,7 +251,7 @@ body {
 
 /* Force hardware-accelerated smooth animations purely on the map coordinate translations! */
 .leaflet-marker-icon.custom-bus-wrapper {
-  transition: transform 2s linear, margin 2s linear; /* Explicit 2s hook mapped tightly against the Driver Interval Engine loop */
+  transition: transform 2.1s linear; /* Explicit 2.1s hook mapped tightly against the Driver Interval Engine loop + 100ms overlap to prevent network jitter stutter */
 }
 
 /* Instantly lock the marker structurally preventing 3-second glide drag during scroll zooms */
