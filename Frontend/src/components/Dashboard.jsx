@@ -280,11 +280,16 @@ export default function Dashboard({ role }) {
   // 🎯 UI
   return (
     <div style={{
-      padding: "30px",
+      padding: "20px",
       background: "#0f172a",
       minHeight: "100vh",
-      color: "white"
+      color: "white",
+      boxSizing: "border-box",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center"
     }}>
+      <div style={{ width: "100%", maxWidth: "1280px", boxSizing: "border-box" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "20px" }}>
         <h1 style={{
           fontSize: "28px",
@@ -400,14 +405,15 @@ export default function Dashboard({ role }) {
 
         return (
 
-          <div style={{ marginTop: "20px", paddingBottom: '40px' }}>
-            <h2 style={{ marginBottom: "15px" }}>Driver Terminal</h2>
+          <div style={{ marginTop: "20px", paddingBottom: '40px', width: '100%', boxSizing: 'border-box' }}>
+            <h2 style={{ marginBottom: "25px", textAlign: "center" }}>Driver Terminal</h2>
 
-            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'center' }}>
 
               {/* Mobile-Style Control Panel - Positioned Beside Map */}
               <div style={{
-                flex: '0 0 380px',
+                flex: '1 1 320px',
+                maxWidth: '450px',
                 padding: '28px',
                 background: 'linear-gradient(145deg, #1e293b, #0f172a)',
                 borderRadius: '20px',
@@ -415,7 +421,8 @@ export default function Dashboard({ role }) {
                 boxShadow: '0 15px 35px rgba(0,0,0,0.4)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '24px'
+                gap: '24px',
+                boxSizing: 'border-box'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -426,7 +433,7 @@ export default function Dashboard({ role }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '12px', boxSizing: 'border-box' }}>
                   <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: isTripActive ? '#00ffd5' : '#ff3366', boxShadow: isTripActive ? '0 0 12px #00ffd5' : '0 0 12px #ff3366' }}></div>
                   <strong style={{ color: isTripActive ? '#00ffd5' : '#ff3366', fontSize: '1.2rem', letterSpacing: '1px' }}>{isTripActive ? "SYSTEM ACTIVE" : "SYSTEM OFFLINE"}</strong>
                 </div>
@@ -467,7 +474,7 @@ export default function Dashboard({ role }) {
               </div>
 
               {/* Responsive Map View - Positioned on Right */}
-              <div style={{ flex: '1 1 500px', height: "65vh", minHeight: "500px", borderRadius: "16px", border: "2px solid #334155", boxShadow: "0 10px 40px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+              <div style={{ flex: '1 1 400px', height: "65vh", minHeight: "400px", borderRadius: "16px", border: "2px solid #334155", boxShadow: "0 10px 40px rgba(0,0,0,0.5)", overflow: "hidden", boxSizing: "border-box" }}>
                 <MapContainer
                   center={busLocation}
                   zoom={13}
@@ -545,6 +552,7 @@ export default function Dashboard({ role }) {
           </MapContainer>
         </div>
       )}
+      </div>
     </div>
   );
 }
