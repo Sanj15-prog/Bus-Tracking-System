@@ -54,9 +54,13 @@ const AnimatedMarker = ({ position, icon, heading }) => {
   return <Marker ref={markerRef} position={position} icon={icon} rotationAngle={heading} rotationOrigin="center center" />;
 };
 
-const socket = io('http://172.17.99.133:5000');
+
 
 export default function Dashboard({ role }) {
+  const socket = React.useMemo(() => {
+    return io(import.meta.env.VITE_BACKEND_URL, { transport: ['websocket'] })
+  })
+
   const navigate = useNavigate();
   const [pendingStudents, setPendingStudents] = useState([]);
   const [loading, setLoading] = useState(true);
