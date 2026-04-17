@@ -89,6 +89,15 @@ export default function Dashboard({ role }) {
   const [isReached, setIsReached] = useState(false); // Driver Arrival Hook
   const [studentReached, setStudentReached] = useState(false); // Student Arrival Hook
 
+  const [toasts, setToasts] = useState([]); // Array of toasts
+  const addToast = React.useCallback((msg) => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, msg }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  }, []);
+
   const [nextStopIndex, setNextStopIndex] = useState(1); // Track next stop index
 
   const [currentUser, setCurrentUser] = useState(null);
@@ -172,13 +181,35 @@ export default function Dashboard({ role }) {
         // Compute active array sequence
         const route = isReversed ? [...baseRoute].reverse() : baseRoute;
 
+        let previousIndex = Math.floor(tripProgressRef.current);
         let nextProg = tripProgressRef.current + 0.05; // Simulation speed factor
         let currentIndex = Math.floor(nextProg);
+
+        // Check if we hit a new stop
+        if (currentIndex > previousIndex && currentIndex < route.length) {
+          const isFinal = currentIndex >= route.length - 1;
+          socket.emit('busEvent', {
+            busId: activeBusId,
+            type: isFinal ? 'DESTINATION_REACHED' : 'STOP_REACHED',
+            stopIndex: currentIndex,
+            isReversed: isReversed
+          });
+
+          if (!isFinal) {
+             const baseStops = ROUTE_STOPS_DATA[activeBusId] || ROUTE_STOPS_DATA['B101'];
+             const orderedStops = isReversed ? [...baseStops].reverse() : baseStops;
+             addToast(`📍 Reached Waypoint: ${orderedStops[currentIndex]?.name}`);
+          }
+        }
 
         // Auto-Stop Trip Upon Destination Arrival!
         if (currentIndex >= route.length - 1) {
           setIsTripActive(false);
           setIsReached(true);
+
+          const baseStops = ROUTE_STOPS_DATA[activeBusId] || ROUTE_STOPS_DATA['B101'];
+          const orderedStops = isReversed ? [...baseStops].reverse() : baseStops;
+          addToast(`✅ Journey Complete: Arrived at ${orderedStops[route.length - 1]?.name}`);
 
           socket.emit('updateLocation', {
             busId: activeBusId,
@@ -247,7 +278,7 @@ export default function Dashboard({ role }) {
   // ✅ Student receives updates for THEIR assigned bus only
   useEffect(() => {
     if (role === 'Student') {
-      socket.on('locationUpdate', (data) => {
+      const handleLocationUpdate = (data) => {
         // Enforce rigorous bus payload locking via explicit parsed strings globally!
         if (currentUser && currentUser.assignedBus) {
           const expectedNumber = typeof currentUser.assignedBus === 'object'
@@ -279,11 +310,41 @@ export default function Dashboard({ role }) {
         if (data.location.nextStopIndex !== undefined) {
           setNextStopIndex(data.location.nextStopIndex);
         }
-      });
-    }
+      };
 
-    return () => socket.off('locationUpdate');
-  }, [role, currentUser]);
+      const handleBusEvent = (data) => {
+        if (currentUser && currentUser.assignedBus) {
+          const expectedNumber = typeof currentUser.assignedBus === 'object'
+            ? currentUser.assignedBus.busNumber
+            : currentUser.assignedBus;
+
+          if (data.busId !== expectedNumber) return;
+
+          if (data.type === 'STARTED') {
+             addToast(data.message || `🚌 Bus ${data.busId} started its route!`);
+          } else if (data.type === 'STOP_REACHED') {
+             const baseStops = ROUTE_STOPS_DATA[data.busId] || ROUTE_STOPS_DATA['B101'];
+             const orderedStops = data.isReversed ? [...baseStops].reverse() : baseStops;
+             const reachedStopName = orderedStops[data.stopIndex]?.name || 'Next Stop';
+             addToast(`📍 Bus reached ${reachedStopName}`);
+          } else if (data.type === 'DESTINATION_REACHED') {
+             const baseStops = ROUTE_STOPS_DATA[data.busId] || ROUTE_STOPS_DATA['B101'];
+             const orderedStops = data.isReversed ? [...baseStops].reverse() : baseStops;
+             const reachedStopName = orderedStops[data.stopIndex]?.name || 'Destination';
+             addToast(`✅ Journey Complete: Arrived at ${reachedStopName}`);
+          }
+        }
+      };
+
+      socket.on('locationUpdate', handleLocationUpdate);
+      socket.on('busEvent', handleBusEvent);
+
+      return () => {
+        socket.off('locationUpdate', handleLocationUpdate);
+        socket.off('busEvent', handleBusEvent);
+      };
+    }
+  }, [role, currentUser, ROUTE_STOPS_DATA, addToast]);
 
   // ✅ Approve + assign bus
   const assignBus = async (userId, busNumber) => {
@@ -328,6 +389,39 @@ export default function Dashboard({ role }) {
       flexDirection: "column",
       alignItems: "center"
     }}>
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
+
+      {/* TOAST NOTIFICATION RENDERER */}
+      <div style={{
+        position: 'fixed',
+        bottom: '30px',
+        right: '30px',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        {toasts.map(toast => (
+          <div key={toast.id} style={{
+            background: '#0ea5e9',
+            color: '#0f172a',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+            fontWeight: 'bold',
+            fontSize: '1.1rem',
+            animation: 'slideInRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards'
+          }}>
+            {toast.msg}
+          </div>
+        ))}
+      </div>
+
       <div style={{ width: "100%", maxWidth: "1280px", boxSizing: "border-box" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "20px" }}>
         <h1 style={{
@@ -499,6 +593,8 @@ export default function Dashboard({ role }) {
                         tripProgressRef.current = 0;
                       }
                       setIsTripActive(true);
+                      addToast(`▶ System Online: Navigating to ${dTo}`);
+                      socket.emit('busEvent', { busId: activeBusId, type: 'STARTED', message: `🚌 Bus ${activeBusId} has started its route!` });
                     }}
                     style={{ padding: '18px', borderRadius: '14px', background: isTripActive ? '#1e293b' : 'linear-gradient(45deg, #0ea5e9, #6f00ff)', color: isTripActive ? '#64748b' : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: isTripActive ? 'none' : '0 6px 20px rgba(111, 0, 255, 0.4)' }}>
                     ▶ INITIATE ROUTE
