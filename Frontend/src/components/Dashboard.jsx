@@ -54,6 +54,17 @@ const AnimatedMarker = ({ position, icon, heading }) => {
   return <Marker ref={markerRef} position={position} icon={icon} rotationAngle={heading} rotationOrigin="center center" />;
 };
 
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 
 
 export default function Dashboard({ role }) {
@@ -78,6 +89,8 @@ export default function Dashboard({ role }) {
   const [isReached, setIsReached] = useState(false); // Driver Arrival Hook
   const [studentReached, setStudentReached] = useState(false); // Student Arrival Hook
 
+  const [nextStopIndex, setNextStopIndex] = useState(1); // Track next stop index
+
   const [currentUser, setCurrentUser] = useState(null);
 
   const tripProgressRef = React.useRef(0);
@@ -99,6 +112,27 @@ export default function Dashboard({ role }) {
     'B101': [[15.3344, 74.7570], [15.5344, 74.6570], [15.7344, 74.5570], [15.8497, 74.4977]], // Haliyal -> Belgaum
     'B102': [[15.3344, 74.7570], [15.3000, 74.7000], [15.2667, 74.6667], [15.2361, 74.6173]], // Haliyal -> Dandeli
     'B103': [[15.3344, 74.7570], [15.4200, 74.9200], [15.4600, 75.0100], [15.3500, 75.1300]]  // Haliyal -> Hubli
+  };
+
+  const ROUTE_STOPS_DATA = {
+    'B101': [
+      { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
+      { name: 'Kittur Cross', lat: 15.5344, lng: 74.6570 },
+      { name: 'MK Hubli', lat: 15.7344, lng: 74.5570 },
+      { name: 'Belgaum City', lat: 15.8497, lng: 74.4977 }
+    ],
+    'B102': [
+      { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
+      { name: 'Mavinkoppa', lat: 15.3000, lng: 74.7000 },
+      { name: 'Barchi', lat: 15.2667, lng: 74.6667 },
+      { name: 'Dandeli', lat: 15.2361, lng: 74.6173 }
+    ],
+    'B103': [
+      { name: 'Haliyal Campus', lat: 15.3344, lng: 74.7570 },
+      { name: 'Dharwad Toll', lat: 15.4200, lng: 74.9200 },
+      { name: 'Navanagar', lat: 15.4600, lng: 75.0100 },
+      { name: 'Hubli Hub', lat: 15.3500, lng: 75.1300 }
+    ]
   };
 
   const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
@@ -153,7 +187,8 @@ export default function Dashboard({ role }) {
               longitude: route[route.length - 1][1],
               heading: busHeading,
               isReversed: isReversed,
-              isReached: true
+              isReached: true,
+              nextStopIndex: route.length - 1
             }
           });
           return;
@@ -198,7 +233,8 @@ export default function Dashboard({ role }) {
             longitude: newLng,
             heading: headingVec,
             isReversed: isReversed,
-            isReached: false
+            isReached: false,
+            nextStopIndex: nextIndex
           }
         });
 
@@ -239,6 +275,9 @@ export default function Dashboard({ role }) {
         }
         if (data.location.isReached !== undefined) {
           setStudentReached(data.location.isReached);
+        }
+        if (data.location.nextStopIndex !== undefined) {
+          setNextStopIndex(data.location.nextStopIndex);
         }
       });
     }
@@ -502,31 +541,101 @@ export default function Dashboard({ role }) {
         <div style={{ marginTop: "20px" }}>
 
           {currentUser && currentUser.assignedBus && (() => {
+            const assignedBusId = typeof currentUser.assignedBus === 'object' ? currentUser.assignedBus.busNumber : currentUser.assignedBus;
             const sFrom = tripDirection ? currentUser.route?.to : currentUser.route?.from;
             const sTo = tripDirection ? currentUser.route?.from : currentUser.route?.to;
+
+            // Resolve Stops
+            const baseStops = ROUTE_STOPS_DATA[assignedBusId] || ROUTE_STOPS_DATA['B101'];
+            const orderedStops = tripDirection ? [...baseStops].reverse() : baseStops;
+           
+            let nextStop = orderedStops[nextStopIndex];
+            if (!nextStop) nextStop = orderedStops[orderedStops.length - 1]; // fallback
+
+            let distanceToNextStop = 0;
+            if (nextStop) {
+               distanceToNextStop = getDistance(liveLocation[0], liveLocation[1], nextStop.lat, nextStop.lng);
+            }
+            const etaMins = Math.max(1, Math.ceil(distanceToNextStop * 1.5)); // 40 km/h -> 1.5 mins per km
 
             return (
               <div style={{
                 background: '#1e293b',
-                padding: '20px',
-                borderRadius: '12px',
+                padding: '24px',
+                borderRadius: '16px',
                 marginBottom: '20px',
                 borderLeft: '5px solid #38bdf8',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+                boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+                display: 'flex',
+                gap: '24px',
+                flexWrap: 'wrap'
               }}>
-                <h2 style={{ color: '#38bdf8', marginBottom: '8px', fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  🚌 Assigned Bus: {typeof currentUser.assignedBus === 'object' ? currentUser.assignedBus.busNumber : currentUser.assignedBus || "Unknown"}
-                </h2>
-                {currentUser.route && (
-                  <p style={{ color: '#e2e8f0', fontSize: '1.2rem', margin: 0 }}>
-                    <strong style={{ color: '#94a3b8' }}>Active Journey:</strong> {sFrom} &rarr; {sTo}
-                  </p>
-                )}
-                {studentReached && (
-                  <p style={{ color: '#00ffd5', fontSize: '1.4rem', margin: '15px 0 0 0', fontWeight: 'bold' }}>
-                    ✅ Destination Reached: {sTo}
-                  </p>
-                )}
+                <div style={{ flex: '1 1 300px' }}>
+                  <h2 style={{ color: '#38bdf8', marginBottom: '8px', fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    🚌 Assigned Bus: {assignedBusId || "Unknown"}
+                  </h2>
+                  {currentUser.route && (
+                    <p style={{ color: '#e2e8f0', fontSize: '1.2rem', margin: 0 }}>
+                      <strong style={{ color: '#94a3b8' }}>Active Journey:</strong> {sFrom} &rarr; {sTo}
+                    </p>
+                  )}
+                  {studentReached && (
+                    <p style={{ color: '#00ffd5', fontSize: '1.4rem', margin: '15px 0 0 0', fontWeight: 'bold' }}>
+                      ✅ Destination Reached: {sTo}
+                    </p>
+                  )}
+                  
+                  {!studentReached && (
+                    <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                      <h4 style={{ margin: '0 0 4px 0', color: '#94a3b8', fontSize: '0.9rem', textTransform: 'uppercase' }}>Upcoming Stop</h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <span style={{ fontSize: '1.3rem', color: '#f8fafc', fontWeight: '600' }}>{nextStop.name}</span>
+                        <span style={{ fontSize: '1.1rem', color: '#38bdf8', fontWeight: 'bold' }}>Arriving in ~{etaMins} mins</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ flex: '1 1 100%', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', marginTop: '8px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: '#94a3b8', fontSize: '0.9rem', textTransform: 'uppercase' }}>Route Progress</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    {orderedStops.map((stop, index) => {
+                      const isPast = index < nextStopIndex && !studentReached;
+                      const isCurrent = index === nextStopIndex && !studentReached;
+                      const isReachedObj = studentReached && index === orderedStops.length - 1;
+                      
+                      let color = '#475569'; // Future stop
+                      if (studentReached || isPast) color = '#10b981'; // Passed / Reached whole trip
+                      else if (isCurrent) color = '#38bdf8'; // Next
+
+                      return (
+                        <React.Fragment key={index}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ 
+                              width: '14px', 
+                              height: '14px', 
+                              borderRadius: '50%', 
+                              background: color,
+                              boxShadow: isCurrent ? '0 0 12px #38bdf8' : (studentReached || isPast ? '0 0 8px #10b981' : 'none'),
+                              border: 'none'
+                            }} />
+                            <span style={{ 
+                              fontSize: '0.95rem', 
+                              color: isCurrent ? '#f8fafc' : (isPast || studentReached ? '#cbd5e1' : '#94a3b8'),
+                              fontWeight: isCurrent ? 'bold' : 'normal'
+                            }}>
+                              {stop.name}
+                            </span>
+                          </div>
+                          {index < orderedStops.length - 1 && (
+                            <div style={{ flex: 1, minWidth: '20px', maxWidth: '40px', height: '2px', background: studentReached || isPast ? '#10b981' : '#334155' }} />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                </div>
+
               </div>
             );
           })()}
