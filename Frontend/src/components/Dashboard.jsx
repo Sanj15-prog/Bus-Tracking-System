@@ -54,7 +54,7 @@ const AnimatedMarker = ({ position, icon, heading }) => {
   return <Marker ref={markerRef} position={position} icon={icon} rotationAngle={heading} rotationOrigin="center center" />;
 };
 
-const socket = io('http://127.0.0.1:5000');
+const socket = io('http://172.17.99.133:5000');
 
 export default function Dashboard({ role }) {
   const navigate = useNavigate();
@@ -289,7 +289,7 @@ export default function Dashboard({ role }) {
         }}>
           🚍 Nexus Transit - {role} Panel
         </h1>
-        <button 
+        <button
           onClick={() => {
             localStorage.removeItem('userToken');
             navigate('/');
@@ -378,7 +378,7 @@ export default function Dashboard({ role }) {
 
       {/* ================= DRIVER ================= */}
       {role === 'Driver' && currentUser && (() => {
-        
+
         // Static geographical fallback if the MongoDB populated fields trace offline
         const ROUTE_NAMES = {
           'B101': { source: 'Haliyal', destination: 'Belgaum' },
@@ -386,11 +386,11 @@ export default function Dashboard({ role }) {
           'B103': { source: 'Haliyal', destination: 'Dharwad/Hubli' }
         };
         const fallbackRoute = ROUTE_NAMES[activeBusId] || { source: "Unknown Hub", destination: "Unknown Depot" };
-        
+
         const dInfo = typeof currentUser.assignedBus === 'object' && currentUser.assignedBus.source
-          ? { from: currentUser.assignedBus.source, to: currentUser.assignedBus.destination } 
+          ? { from: currentUser.assignedBus.source, to: currentUser.assignedBus.destination }
           : { from: fallbackRoute.source, to: fallbackRoute.destination };
-          
+
         const dFrom = isReversed ? dInfo.to : dInfo.from;
         const dTo = isReversed ? dInfo.from : dInfo.to;
 
@@ -400,66 +400,66 @@ export default function Dashboard({ role }) {
             <h2 style={{ marginBottom: "15px" }}>Driver Terminal</h2>
 
             <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              
+
               {/* Mobile-Style Control Panel - Positioned Beside Map */}
-              <div style={{ 
+              <div style={{
                 flex: '0 0 380px',
-                padding: '28px', 
-                background: 'linear-gradient(145deg, #1e293b, #0f172a)', 
-                borderRadius: '20px', 
+                padding: '28px',
+                background: 'linear-gradient(145deg, #1e293b, #0f172a)',
+                borderRadius: '20px',
                 border: '1px solid rgba(255,255,255,0.05)',
                 boxShadow: '0 15px 35px rgba(0,0,0,0.4)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '24px'
               }}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                       <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Vehicle Assigned</span>
-                       <h2 style={{ margin: 0, color: '#38bdf8', fontSize: '2.4rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                         🚌 {activeBusId}
-                       </h2>
-                    </div>
-                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Vehicle Assigned</span>
+                    <h2 style={{ margin: 0, color: '#38bdf8', fontSize: '2.4rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🚌 {activeBusId}
+                    </h2>
+                  </div>
+                </div>
 
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '12px' }}>
-                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: isTripActive ? '#00ffd5' : '#ff3366', boxShadow: isTripActive ? '0 0 12px #00ffd5' : '0 0 12px #ff3366' }}></div>
-                    <strong style={{ color: isTripActive ? '#00ffd5' : '#ff3366', fontSize: '1.2rem', letterSpacing: '1px' }}>{isTripActive ? "SYSTEM ACTIVE" : "SYSTEM OFFLINE"}</strong>
-                 </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '12px' }}>
+                  <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: isTripActive ? '#00ffd5' : '#ff3366', boxShadow: isTripActive ? '0 0 12px #00ffd5' : '0 0 12px #ff3366' }}></div>
+                  <strong style={{ color: isTripActive ? '#00ffd5' : '#ff3366', fontSize: '1.2rem', letterSpacing: '1px' }}>{isTripActive ? "SYSTEM ACTIVE" : "SYSTEM OFFLINE"}</strong>
+                </div>
 
-                 <div style={{ background: 'rgba(0,0,0,0.25)', padding: '16px 20px', borderRadius: '14px', borderLeft: '4px solid #6f00ff' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Active Route</span>
-                    <p style={{ fontSize: '1.3rem', margin: '6px 0 0 0', color: '#f0f4f8', fontWeight: '500' }}>{dFrom} <strong style={{ color: '#6f00ff', margin: '0 10px' }}>&rarr;</strong> {dTo}</p>
-                    
-                    {isReached && (
-                       <p style={{ color: '#00ffd5', fontSize: '1.2rem', margin: '15px 0 0 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                         ✅ Target Destination Reached!
-                       </p>
-                    )}
-                 </div>
+                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '16px 20px', borderRadius: '14px', borderLeft: '4px solid #6f00ff' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>Active Route</span>
+                  <p style={{ fontSize: '1.3rem', margin: '6px 0 0 0', color: '#f0f4f8', fontWeight: '500' }}>{dFrom} <strong style={{ color: '#6f00ff', margin: '0 10px' }}>&rarr;</strong> {dTo}</p>
 
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
-                    <button 
-                      disabled={isTripActive} 
-                      onClick={() => {
-                          if (!currentUser) return;
-                          if (!isTripActive && isReached) {
-                            setIsReversed(!isReversed);
-                            setIsReached(false);
-                            tripProgressRef.current = 0;
-                          }
-                          setIsTripActive(true);
-                      }} 
-                      style={{ padding: '18px', borderRadius: '14px', background: isTripActive ? '#1e293b' : 'linear-gradient(45deg, #0ea5e9, #6f00ff)', color: isTripActive ? '#64748b' : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: isTripActive ? 'none' : '0 6px 20px rgba(111, 0, 255, 0.4)' }}>
-                      ▶ INITIATE ROUTE
-                    </button>
-                    <button 
-                      disabled={!isTripActive} 
-                      onClick={() => setIsTripActive(false)} 
-                      style={{ padding: '18px', borderRadius: '14px', background: !isTripActive ? '#1e293b' : 'linear-gradient(45deg, #ff3366, #e11d48)', color: !isTripActive ? '#64748b' : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: !isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: !isTripActive ? 'none' : '0 6px 20px rgba(225, 29, 72, 0.4)' }}>
-                      ⏹ HALT MOVEMENT
-                    </button>
-                 </div>
+                  {isReached && (
+                    <p style={{ color: '#00ffd5', fontSize: '1.2rem', margin: '15px 0 0 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      ✅ Target Destination Reached!
+                    </p>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+                  <button
+                    disabled={isTripActive}
+                    onClick={() => {
+                      if (!currentUser) return;
+                      if (!isTripActive && isReached) {
+                        setIsReversed(!isReversed);
+                        setIsReached(false);
+                        tripProgressRef.current = 0;
+                      }
+                      setIsTripActive(true);
+                    }}
+                    style={{ padding: '18px', borderRadius: '14px', background: isTripActive ? '#1e293b' : 'linear-gradient(45deg, #0ea5e9, #6f00ff)', color: isTripActive ? '#64748b' : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: isTripActive ? 'none' : '0 6px 20px rgba(111, 0, 255, 0.4)' }}>
+                    ▶ INITIATE ROUTE
+                  </button>
+                  <button
+                    disabled={!isTripActive}
+                    onClick={() => setIsTripActive(false)}
+                    style={{ padding: '18px', borderRadius: '14px', background: !isTripActive ? '#1e293b' : 'linear-gradient(45deg, #ff3366, #e11d48)', color: !isTripActive ? '#64748b' : 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', cursor: !isTripActive ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: !isTripActive ? 'none' : '0 6px 20px rgba(225, 29, 72, 0.4)' }}>
+                    ⏹ HALT MOVEMENT
+                  </button>
+                </div>
               </div>
 
               {/* Responsive Map View - Positioned on Right */}
@@ -470,11 +470,11 @@ export default function Dashboard({ role }) {
                   style={{ height: "100%", width: "100%" }}
                 >
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  
+
                   {/* Draw Path Visually */}
-                  <Polyline 
-                    positions={STATIC_FULL_ROUTES[activeBusId] || STATIC_FULL_ROUTES['B101']} 
-                    pathOptions={{ color: '#ffffff', weight: 6, opacity: 0.9, className: 'glowing-path' }} 
+                  <Polyline
+                    positions={STATIC_FULL_ROUTES[activeBusId] || STATIC_FULL_ROUTES['B101']}
+                    pathOptions={{ color: '#ffffff', weight: 6, opacity: 0.9, className: 'glowing-path' }}
                   />
 
                   <AnimatedMarker position={busLocation} icon={customBusIcon} heading={busHeading} />

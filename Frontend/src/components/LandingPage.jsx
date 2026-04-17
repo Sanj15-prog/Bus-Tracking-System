@@ -27,7 +27,7 @@ export default function LandingPage() {
 
     try {
       const res = await axios.post(
-        (import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000') + '/api/auth/login',
+        import.meta.env.VITE_BACKEND_URL + '/api/auth/login',
         {
           email: formData.email,
           password: formData.password,
@@ -85,7 +85,7 @@ export default function LandingPage() {
             <Bus size={64} />
           </div>
           <h1>Nexus Transit</h1>
-          <p>Smart Campus Mobility System</p>
+          <p>Smart Mobility System</p>
         </div>
 
         <div className="landing-card">
